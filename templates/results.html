@@ -1,0 +1,31 @@
+{% extends "layout.html"%}
+
+{% block content %}
+
+  {% if results.error %}
+    <h1>{{results.error}}</h1>
+  {% else %}
+    <h1>Results for {{username}}</h1>
+    <ol class="topic-ranking">
+    {% for topicnum, listing in results %}
+      <li>
+        <h2>Topic {{topicnum}}</h2>
+        <h3>Recommendations</h3>
+        <ol class="recommendation-list">
+        {% for album in listing.new[:24] %}
+          <li>{{macros.show_album(album)}}</li>
+        {% endfor %}
+          <li><a href="/results/{{username}}/show-more/{{topicnum}}/24/{{listing.new[:24][-1].name}}" class="js-inline" data-target="li">show more</a></li>
+        </ol>
+        <h3>Based on</h3>
+        <ol class="based-on-list">
+        {% for album in listing.exist %}
+          <li>{{macros.show_album(album)}}</li>
+        {% endfor %}
+        </ol>
+      </li>
+    {% endfor %}
+    </ol>
+  {% endif %}
+
+{% endblock %}

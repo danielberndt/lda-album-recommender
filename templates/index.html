@@ -1,0 +1,13 @@
+{% extends "layout.html"%}
+
+{% block content %}
+<h1>Last.fm Recommender!</h1>
+
+<form action="/username" method="post">
+  <input type="text" name="username" placeholder="lastfm username">
+  <button type="submit">give me recommendations</button>
+</form>
+
+<ul class="msg"></ul>
+
+{% endblock %}

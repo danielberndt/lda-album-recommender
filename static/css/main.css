@@ -1,0 +1,91 @@
+body {
+  font-family: Helvetica;
+  color: #555;
+  padding: 50px;
+  min-height: 100%; }
+
+h1, h2, h3 {
+  font-weight: normal; }
+
+h1 {
+  text-align: center; }
+
+a {
+  color: #be1e3b;
+  text-decoration: none; }
+  a:hover {
+    color: #470b16; }
+
+ol, ul {
+  padding: 0; }
+
+form {
+  position: relative; }
+  form.pending:after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(105, 105, 105, 0.75); }
+  form input, form button {
+    display: block;
+    width: 250px;
+    margin: 0 auto;
+    margin-bottom: 12px; }
+    form input[type="text"], form button[type="text"] {
+      border: 1px solid #ccc;
+      padding: 5px 10px;
+      font-size: 1.5em;
+      text-align: center; }
+    form input[type="submit"], form button[type="submit"] {
+      background-color: #4b2583;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16pt; }
+      form input[type="submit"]:hover, form button[type="submit"]:hover {
+        background-color: #5d2ea3; }
+
+.msg {
+  display: none;
+  position: absolute;
+  background: url("/static/images/loader.gif") no-repeat center 15px white;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.15);
+  padding: 60px 5% 20px;
+  list-style: none;
+  width: 40%;
+  left: 25%;
+  top: 30%; }
+  .msg.error {
+    background-image: none;
+    padding-top: 20px;
+    border: 3px solid #832540; }
+  .msg .done:after {
+    content: " ✔";
+    color: green; }
+  .msg .error-message {
+    color: #832540;
+    font-weight: bold; }
+
+.based-on-list {
+  margin-bottom: 80px; }
+
+.topic-ranking li {
+  display: inline-block; }
+
+li .album img {
+  width: 64px;
+  height: 64px; }
+li .album .description {
+  display: none;
+  position: absolute;
+  margin-left: -108px;
+  width: 200px;
+  background: #fff;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  padding: 20px 40px; }
+li .album:hover .description {
+  display: block; }

@@ -1,0 +1,8 @@
+*.pyc
+bin/
+.sass-cache
+.classpath
+.project
+.settings/
+*-sources.jar
+app.conf

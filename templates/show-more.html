@@ -1,0 +1,13 @@
+{% extends "layout.html"%}
+
+{% block content %}
+
+  <h1>More Recommendations for Topic {{topic}}</h1>
+  <ol>
+    {% for album in results %}
+      <li>{{macros.show_album(album)}}</li>
+    {% endfor %}
+    <li><a href="/results/{{username}}/show-more/{{topic}}/{{nextoffset}}/{{(results|last)["name"]}}" class="js-inline" data-target="li">show more</a></li>
+  </ol>
+
+{% endblock %}
