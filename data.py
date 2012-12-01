@@ -1,6 +1,9 @@
 from datetime import datetime
 from pymongo import Connection, ASCENDING, DESCENDING
-from bson.binary import Binary
+try:
+  from bson.binary import Binary
+except ImportError, e:
+  from pymongo.binary import Binary
 
 from StringIO import StringIO
 from gzip import GzipFile

@@ -6,3 +6,4 @@ bin/
 .settings/
 *-sources.jar
 app.conf
+bottle.py
