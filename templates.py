@@ -3,7 +3,7 @@ import config
 
 env = Environment(
     autoescape=True,
-    loader=FileSystemLoader('templates')
+    loader=FileSystemLoader(config.basedir('templates'))
   )
 
 class Filters:

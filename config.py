@@ -21,6 +21,9 @@ f.close()
 
 def get(key):
   return _conf[key]
+  
+def basedir(file):
+  return os.path.join(BASEDIR, file)
 
 
 if __name__=="__main__":

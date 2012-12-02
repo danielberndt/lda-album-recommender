@@ -97,19 +97,19 @@ def show_more(username, topic, offset, past_album):
   
 @get('/static/js/<filename:re:.*\.js>')
 def javascripts(filename):
-    return static_file(filename, root='static/js')
+  return static_file(filename, root=config.basedir('static/js'))
 
 @get('/static/css/<filename:re:.*\.css>')
 def stylesheets(filename):
-    return static_file(filename, root='static/css')
+  return static_file(filename, root=config.basedir('static/css'))
 
 @get('/static/images/<filename:re:.*\.(jpg|png|gif|ico)>')
 def images(filename):
-    return static_file(filename, root='static/images')
+  return static_file(filename, root=config.basedir('static/images'))
 
 @get('/static/fonts/<filename:re:.*\.(eot|ttf|woff|svg)>')
 def fonts(filename):
-    return static_file(filename, root='static/fonts')
+  return static_file(filename, root=config.basedir('static/fonts'))
 
 if __name__=="__main__":
   run(host='0.0.0.0', port=8080, server=GeventWebSocketServer,debug=config.get("debug"))
