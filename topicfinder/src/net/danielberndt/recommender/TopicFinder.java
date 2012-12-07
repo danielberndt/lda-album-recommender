@@ -1,25 +1,21 @@
 package net.danielberndt.recommender;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 import cc.mallet.topics.ParallelTopicModel;
 import cc.mallet.types.Alphabet;
 import cc.mallet.types.FeatureSequence;
-import cc.mallet.types.IDSorter;
 import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.BasicDBObjectBuilder;
@@ -29,54 +25,89 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.Mongo;
 
-public class TopicFinder {
 
-	private static final int LOWERTHRESHOLD = 2;
+
+public class TopicFinder {
+	
 	private static final String dbName = "lastfm_lda";
 	private static final String inCollName = "user_top_albums";
-	private static final String topicDistCollName = "topic_dist_albums";
-	private static final String topicCollName = "topics";
+	private static final String albumsWithTopicsName = "albums";
 	
-	private static DBCollection getCollection(String name) throws Exception {
-		Mongo m = new Mongo();
-		DB db = m.getDB(dbName);
-		return db.getCollection(name);
+	private static Map<String, String> albumTransformer;
+	private static Map<String, Integer> albumCount;
+	private static DBCursor cursor = getCollection(inCollName).find(new BasicDBObject("period", "12month"), BasicDBObjectBuilder.start().add("name", true).add("top_albums", true).get());
+
+	private static DBCollection getCollection(String name) {
+		try {
+			Mongo m = new Mongo();
+			DB db = m.getDB(dbName);
+			return db.getCollection(name);
+		} 
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
-	private static Map<AlbumToken, DBObject> albumToDBObj = Maps.newHashMapWithExpectedSize(50000);
-	
-	public static Multimap<String, AlbumToken> getData() throws Exception  {
-		Multimap<String, AlbumToken> userToAlbums = HashMultimap.create();
-		DBCursor cursor = getCollection(inCollName).find(new BasicDBObject("period", "12month"), BasicDBObjectBuilder.start().add("name", true).add("top_albums", true).get());
+	private static Map<String, List<String>> getData() {
+		Map<String, List<String>> userToAlbums = Maps.newHashMapWithExpectedSize(5000);
+		Map<String, Multiset<String>> artistToAlbums = Maps.newHashMapWithExpectedSize(1000);
+		
+		int i=0;
+		
 		for (DBObject obj : cursor) {
+			i++;
+			if (i%1000==0) System.out.println("read user "+i);
 			String userName = (String)obj.get("name");
 			for (Object albumObj : ((BasicDBList)obj.get("top_albums"))) {
-				DBObject album = (DBObject)albumObj;
-				AlbumToken at =  new AlbumToken((String)album.get("artist"), (String)album.get("name"));
-				if (!albumToDBObj.containsKey(album)) {
-					album.removeField("playcount");
-					albumToDBObj.put(at, album);
+				DBObject albumDBObj = (DBObject)albumObj;
+				String artist = (String)albumDBObj.get("artist");
+				String album = (String)albumDBObj.get("name");
+				Multiset<String> albums = artistToAlbums.get(artist);
+				if (albums==null) {
+					albums = HashMultiset.create();
+					artistToAlbums.put(artist, albums);
 				}
-				userToAlbums.put(userName, at);
+				albums.add(album);
+				String albumKey = artist+'§'+album;
+				List<String> list = userToAlbums.get(userName);
+				if (list==null) {
+					list = new ArrayList<String>(70);
+					userToAlbums.put(userName, list);
+				}
+				list.add(albumKey);
 			}
 		}
+		albumTransformer = clusterAlbums(artistToAlbums);
+		for (Map.Entry<String, List<String>> e: userToAlbums.entrySet()) {
+			List<String> newList = Lists.newArrayListWithCapacity(e.getValue().size());
+			for (String albumKey: e.getValue()) newList.add(albumTransformer.get(albumKey));
+		}
+		
 		return userToAlbums;
 	}
 	
+	private static Map<String, String> clusterAlbums(Map<String, Multiset<String>> artistToAlbums) {
+		Map<String, String> map = Maps.newHashMapWithExpectedSize(artistToAlbums.size()*3);
+		albumCount = Maps.newHashMapWithExpectedSize(artistToAlbums.size()*3);
+		for (Map.Entry<String, Multiset<String>> e: artistToAlbums.entrySet()) {
+			for (Multiset.Entry<String> albumEntry: e.getValue().entrySet()) {
+				String source = e.getKey()+'§'+albumEntry.getElement();
+				map.put(source, source);
+				albumCount.put(source, albumEntry.getCount());
+			}
+		}
+		return map;
+	}
+	
 	public static void main(String[] args) throws Exception {
-		Multimap<String, AlbumToken> data = getData();
+		System.out.println("start");
+		Map<String, List<String>> data = getData();
 		Alphabet dataAlphabet = new Alphabet();
 		
-		Map<String, FeatureSequence> features = Maps.newHashMapWithExpectedSize(data.size()/2);
-		for (Map.Entry<String, Collection<AlbumToken>> e: data.asMap().entrySet()) {
+		Map<String, FeatureSequence> features = Maps.newHashMapWithExpectedSize(data.size());
+		for (Map.Entry<String, List<String>> e: data.entrySet()) {
 			FeatureSequence seq = new FeatureSequence(dataAlphabet);
-			int min = Integer.MAX_VALUE;
-			for (AlbumToken album: e.getValue()) if (album.getCount()<min) min=album.getCount();
-			for (AlbumToken album: e.getValue()) {
-				if (album.getCount()>LOWERTHRESHOLD) {
-					for (int i=0,l=(int)Math.pow(album.getCount()/min, 0.5);i<l;i++) seq.add(album);
-				}
-			}
+			for (String albumKey: e.getValue()) seq.add(albumKey);
 			features.put(e.getKey(), seq);
 		}
 		
@@ -87,17 +118,13 @@ public class TopicFinder {
 		int numTopics = 150;
 		ParallelTopicModel model = new ParallelTopicModel(numTopics);
 		model.addInstances(instances);
-		model.setNumThreads(1);
-        model.setNumIterations(300);
+        model.setNumIterations(150);
         model.estimate();
-        
         entryProbsToDB(getTopicDistributionOverTypes(model),model.getAlphabet());
-        enterBestTopicMatchToDB(model.getSortedWords(), model.getAlphabet());
-
 	}
-
-	private static Map<Integer, TopicDistribution> getTopicDistributionOverTypes(ParallelTopicModel model) {
-		Map<Integer, TopicDistribution> map = Maps.newHashMapWithExpectedSize(model.getAlphabet().size());
+	
+	private static Map<Integer, double[]> getTopicDistributionOverTypes(ParallelTopicModel model) {
+		Map<Integer, double[]> map = Maps.newHashMapWithExpectedSize(model.getAlphabet().size());
 		for (int type=0; type<model.getAlphabet().size(); type++) {
 			double sum = 0;
 			double[] dist = new double[model.getNumTopics()];
@@ -108,95 +135,55 @@ public class TopicFinder {
 				sum+=weight;
 			}
 			for (int i=0;i<model.getNumTopics();i++) dist[i]/=sum; // normalise
-			map.put(type, new TopicDistribution(dist, ((AlbumToken)model.getAlphabet().lookupObject(type)).getCount()));
+			map.put(type, dist);
 		}
 		return map;
 	}
 	
-	private static void entryProbsToDB(Map<Integer, TopicDistribution> dists, Alphabet alphabet) throws Exception {
-		DBCollection col = getCollection(topicDistCollName);
+	private static void entryProbsToDB(Map<Integer, double[]> dists, Alphabet alphabet) throws Exception {
+		DBCollection col = getCollection(albumsWithTopicsName);
 		col.drop();
 		
 		int interval = 1000;
-		List<DBObject> toBeSaved = Lists.newArrayListWithCapacity(interval);
-		for (Map.Entry<Integer, TopicDistribution> e: dists.entrySet()) {
-			AlbumToken album = (AlbumToken)alphabet.lookupObject(e.getKey());
-			DBObject saveObj = BasicDBObjectBuilder.start("count", e.getValue().count).add("distribution", e.getValue().distribution).get();
-			saveObj.putAll(albumToDBObj.get(album));
-			toBeSaved.add(saveObj);
-			if (toBeSaved.size() == interval) {
+		List<DBObject> toBeSaved = Lists.newArrayListWithCapacity(interval+interval/5);
+		Set<String> saved = Sets.newHashSetWithExpectedSize(dists.size());
+		for (DBObject obj : cursor) {
+			for (Object albumObj : ((BasicDBList)obj.get("top_albums"))) {
+				DBObject albumDBObj = (DBObject)albumObj;
+				String artist = (String)albumDBObj.get("artist");
+				String album = (String)albumDBObj.get("name");
+				String albumKey = artist+'§'+album;
+				
+				if (!saved.add(albumKey)) continue;
+				
+				double[] dist = dists.get(alphabet.lookupIndex(albumKey));
+				int count = albumCount.get(albumKey);
+				
+				albumDBObj.removeField("playcount");
+				albumDBObj.put("count", count);
+				albumDBObj.put("distribution", dist);
+				
+				List<DBObject> topics = Lists.newArrayList();
+				for (int topic = 0; topic < dist.length; topic++) {
+					double d = dist[topic];
+					if (d==0) continue;
+					topics.add(BasicDBObjectBuilder.start("topic",topic).add("count", d*count).get());
+				}
+				albumDBObj.put("topics", topics);
+				
+				toBeSaved.add(albumDBObj);
+			}
+			
+			if (toBeSaved.size() >= interval) {
+				System.out.println(String.format("saved: %.2f%%", (saved.size()/(double)dists.size())*100));
 				col.insert(toBeSaved);
 				toBeSaved.clear();
 			}
 		}
+		
 		col.insert(toBeSaved);
 		col.ensureIndex(BasicDBObjectBuilder.start("artist", 1).add("name", 1).get());
-		System.out.println(String.format("WROTE %s TO DB", col.getName()));
-	}
-	
-	private static void enterBestTopicMatchToDB(List<TreeSet<IDSorter>> topicSortedWords, Alphabet alphabet) throws Exception {
-		DBCollection col = getCollection(topicCollName);
-		col.drop();
-		
-		List<DBObject> toBeSaved = Lists.newArrayListWithCapacity(topicSortedWords.size()*topicSortedWords.get(0).size());
-		int topic=0;
-		for (Set<IDSorter> albums: topicSortedWords) {
-			for (IDSorter info: albums) {
-				AlbumToken album = (AlbumToken)alphabet.lookupObject(info.getID());
-				DBObject saveObj = BasicDBObjectBuilder.start("topic",topic).add("count", info.getWeight()).add("totalCount", album.getCount()).get();
-				saveObj.putAll(albumToDBObj.get(album));
-				toBeSaved.add(saveObj);
-			}
-			topic ++;
-		}
-		
-		col.insert(toBeSaved);
-		col.ensureIndex(BasicDBObjectBuilder.start("topic", 1).add("count", -1).get());
-		System.out.println(String.format("WROTE %s TO DB", col.getName()));
-	}
-	
-	public static class AlbumToken {
-		public final String artist;
-		public final String album;
-		
-		private static Multiset<AlbumToken> counter = HashMultiset.create();
-		
-		public AlbumToken(String artist, String album) {
-			this.artist = artist;
-			this.album = album;
-			counter.add(this);
-		}
-		
-		public int getCount() {
-			return counter.count(this);
-		}
-		
-		@Override
-		public boolean equals(Object o) {
-			if (!(o instanceof AlbumToken)) return false;
-			AlbumToken other = (AlbumToken)o;
-			return this.album.equals(other.album) && this.artist.equals(other.artist);
-		}
-		
-		@Override
-		public int hashCode() {
-			return Objects.hashCode(artist, album);
-		}
-		
-		@Override
-		public String toString() {
-			return String.format("%s – '%s'", artist, album);
-		}
-	} 
-	
-	public static class TopicDistribution {
-		public final double[] distribution;
-		public final int count;
-		
-		public TopicDistribution(double[] distribution, int count) {
-			this.distribution = distribution;
-			this.count = count;
-		}
+		col.ensureIndex(BasicDBObjectBuilder.start("topics.topic", 1).add("topics.count", -1).get());
 	}
 	
 }

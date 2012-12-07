@@ -12,8 +12,8 @@ connection = Connection()
 db = connection.lastfm_lda
 db.cached_request.ensure_index("options")
 db.user_top_albums.ensure_index([("period", ASCENDING), ("name", ASCENDING)])
-db.topics.ensure_index([("topic", ASCENDING), ("count", DESCENDING)])
-db.topic_dist_albums.ensure_index([("artist", ASCENDING),("name", ASCENDING)])
+db.albums.ensure_index([("topics.topic", ASCENDING), ("topics.count", DESCENDING)])
+db.albums.ensure_index([("artist", ASCENDING),("name", ASCENDING)])
 
 def save_user_top_albums(username, album_list, period):
   collection = db.user_top_albums
@@ -35,10 +35,10 @@ def get_existing_user_names():
   return map(lambda user: user["name"], db.user_top_albums.find({},{"name":True}))
   
 def find_topics(albums):
-  return db.topic_dist_albums.find({"$or":albums})
+  return db.albums.find({"$or":albums}, {"artist":1, "name":1, "distribution":1})
   
 def get_top_of_topic(topic_index, limit=50, offset=0):
-  return db.topics.find({"topic":topic_index},limit=limit, sort=[('count', -1)], skip=offset)
+  return db.albums.find({"topics.topic":topic_index},limit=limit, skip=offset)
 
 def check_cache(options, refresh_after_days=7):
   result = db.cached_request.find_one({"options":options})

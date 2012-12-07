@@ -70,12 +70,13 @@ class UserProcess:
     topic_influence = {}
     for dist in data.find_topics(map(lambda a: {"artist": a["artist"],"name": a["name"]}, self.recent_albums)):
       if not topicsums: topicsums = [0]*len(dist["distribution"])
-      count = (int(recent_album_dict[(dist["artist"],dist["name"])]["playcount"]))**0.5
+      full_album_info = recent_album_dict[(dist["artist"],dist["name"])]
+      count = (int(full_album_info["playcount"]))**0.5
       topicsums = map(lambda (a,b): a+b*count, zip(topicsums, dist["distribution"]))
       for topic_index, dist_value in enumerate(dist["distribution"]):
         influence = dist_value * count
         if influence<0.1: continue
-        topic_influence.setdefault(topic_index,[]).append((influence,dist))
+        topic_influence.setdefault(topic_index,[]).append((influence,full_album_info))
         
     top_topics = filter(lambda (e,t): t>0, sorted(enumerate(topicsums), key=lambda (e,t): t, reverse=True))
     
