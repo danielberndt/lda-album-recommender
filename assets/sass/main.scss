@@ -1,12 +1,21 @@
+@import url(http://fonts.googleapis.com/css?family=Signika:300&subset=latin-ext,latin);
+
+* {
+  margin:0;
+  padding:0;
+}
+
 body {
   font-family:Helvetica;
   color:#555;
   padding:50px;
   min-height:100%;
+  font-family: 'Signika', sans-serif;
 }
 
 h1, h2, h3 {
   font-weight:normal;
+  margin-bottom:1em;
 }
 
 h1 {
@@ -14,17 +23,23 @@ h1 {
 }
 
 a {
-  color:#be1e3b;
+  color:#888;
   text-decoration:none;
   
   &:hover {
-    color:#470b16
+    color:#666;
   }
 }
 
 ol, ul {
   padding:0;
+  list-style:none;
 }
+
+input,textarea, button{
+  font:inherit;
+}
+
 
 form {
   
@@ -74,7 +89,6 @@ form {
   background:url("/static/images/loader.gif") no-repeat center 15px #fff;
   box-shadow:0 0 5px rgba(0,0,0,0.15);
   padding:60px 5% 20px;
-  list-style:none;
   width:40%;
   left:25%;
   top:30%;
@@ -97,33 +111,60 @@ form {
   
 }
 
+.recommendation-list, .based-on-list {
+  overflow:hidden;
+  clear:both;
+  margin-bottom:40px;
+  li {
+    display:block;
+    float:left;
+  }
+}
+
 .based-on-list {
   margin-bottom:80px;
 }
 
-.topic-ranking li {
-  display:inline-block;
-}
-
 li .album {
+  margin:5px;
+  border: 1px solid #ddd;
+  padding: 5px;
+  text-align: center;
+  
   img {
-    width:64px;
-    height:64px;
+    width:150px;
+    height:150px;
   }
   .description {
-    display:none;
-    position:absolute;
-    margin-left:-108px;
-    width:200px;
-    background:#fff;
-    box-shadow:0 0 5px rgba(0,0,0,0.2);
-    padding:20px 40px;
+    padding-top:5px;
+    font-size:12px;
+    width:150px;
+    white-space:nowrap;
+    overflow:hidden;
+    
+    .artist-desc {
+      font-size:14px;
+    }
   }
   
+  
   &:hover {
-    .description {
-      display:block;
+    border-color: #bbb;
+  }
+}
+
+li.show-more {
+  height:150px;
+  margin: 5px;
+  padding: 5px;
+  a {
+    display:inline-block;
+    margin-top:65px;
+    
+    &:after{
+      content:"▶";
+      font-size: 10px;
+      margin-left: 5px;
     }
   }
 }
-

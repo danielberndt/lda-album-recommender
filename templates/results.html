@@ -15,7 +15,7 @@
         {% for album in listing.new[:24] %}
           <li>{{macros.show_album(album)}}</li>
         {% endfor %}
-          <li><a href="/results/{{username}}/show-more/{{topicnum}}/24/{{listing.new[:24][-1].name}}" class="js-inline" data-target="li">show more</a></li>
+          <li class="show-more"><a href="/results/{{username}}/show-more/{{topicnum}}/24/{{listing.new[:24][-1].name}}" class="js-inline" data-target="li">show more</a></li>
         </ol>
         <h3>Based on</h3>
         <ol class="based-on-list">

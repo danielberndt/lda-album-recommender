@@ -1,9 +1,9 @@
 {% macro show_album(album) %}
   <div class="album">
-    <img src="{{album.image_medium}}" alt="{{album.name}} by {{album.artist}}">
+    <img src="{{album.image_large}}" alt="{{album.name}} by {{album.artist}}">
     <div class="description">
-      <b><a href="{{album.artist_url}}" target="_blank">{{album.artist}}</a></b> - 
-      <a href="{{album.album_url}}" target="_blank">{{album.name}}</a>
+      <div class="artist-desc"><a href="{{album.artist_url}}" target="_blank" title="{{album.artist}}">{{album.artist}}</a></div>
+      <div class="album-desc"><a href="{{album.album_url}}" target="_blank" title="{{album.name}}">{{album.name}}</a></div>
     </div>
   </div>
 {% endmacro %}

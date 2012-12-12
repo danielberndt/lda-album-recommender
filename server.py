@@ -112,4 +112,4 @@ def fonts(filename):
   return static_file(filename, root=config.basedir('static/fonts'))
 
 if __name__=="__main__":
-  run(host='0.0.0.0', port=8080, server=GeventWebSocketServer,debug=config.get("debug"))
+  run(host='0.0.0.0', port=8080, server=GeventWebSocketServer,reloader=config.get("debug"),debug=config.get("debug"))
